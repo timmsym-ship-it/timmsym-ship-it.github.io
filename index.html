@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3-Minute Sand Timer</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-color: #f3f4f6;
+    }
+    
+    #timer-container {
+      margin-bottom: 2rem;
+    }
+    
+    .button-container {
+      display: flex;
+      gap: 1rem;
+    }
+    
+    button {
+      padding: 0.75rem 1.5rem;
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    #start-btn {
+      background-color: #22c55e;
+    }
+    
+    #start-btn:hover {
+      background-color: #16a34a;
+    }
+    
+    #flip-btn {
+      background-color: #3b82f6;
+    }
+    
+    #flip-btn:hover {
+      background-color: #2563eb;
+    }
+    
+    #reset-btn {
+      background-color: #6b7280;
+    }
+    
+    #reset-btn:hover {
+      background-color: #4b5563;
+    }
+    
+    #message {
+      margin-top: 1rem;
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: #dc2626;
+    }
+    
+    @keyframes flash-red {
+      0%, 100% { background-color: #f3f4f6; }
+      50% { background-color: #fca5a5; }
+    }
+    
+    .flashing {
+      animation: flash-red 0.5s ease-in-out 4;
+    }
+  </style>
+</head>
+<body>
+  <div id="timer-container">
+    <svg width="200" height="400" viewBox="0 0 200 400" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
+      <!-- Top sand -->
+      <rect id="top-sand" x="10" y="10" width="180" height="180" fill="#d4a574" />
+      
+      <!-- Bottom sand -->
+      <rect id="bottom-sand" x="10" y="390" width="180" height="0" fill="#d4a574" />
+      
+      <!-- Sand stream -->
+      <line id="sand-stream" x1="100" y1="200" x2="100" y2="210" stroke="#d4a574" stroke-width="2" style="display: none;" />
+      
+      <!-- Frame -->
+      <rect x="10" y="10" width="180" height="180" fill="none" stroke="#333" stroke-width="3" />
+      <rect x="10" y="210" width="180" height="180" fill="none" stroke="#333" stroke-width="3" />
+      
+      <!-- Connecting neck -->
+      <path d="M 100 190 L 90 200 L 110 200 Z" fill="#333" />
+      <path d="M 100 210 L 90 200 L 110 200 Z" fill="#333" />
+    </svg>
+  </div>
+
+  <div class="button-container">
+    <button id="start-btn">Start</button>
+    <button id="flip-btn">Flip Timer</button>
+    <button id="reset-btn">Reset</button>
+  </div>
+
+  <div id="message"></div>
+
+  <script>
+    const TOTAL_DURATION = 180000; // 3 minutes in milliseconds
+    
+    let sand = 100; // percentage of sand in top half
+    let isFlipped = false;
+    let isRunning = false;
+    let lastUpdate = Date.now();
+    let animationFrame = null;
+    
+    const topSandEl = document.getElementById('top-sand');
+    const bottomSandEl = document.getElementById('bottom-sand');
+    const sandStreamEl = document.getElementById('sand-stream');
+    const startBtn = document.getElementById('start-btn');
+    const flipBtn = document.getElementById('flip-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const messageEl = document.getElementById('message');
+    
+    // Create audio context for beep sound
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playBeep() {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    }
+    
+    function updateVisuals() {
+      const topSand = isFlipped ? 100 - sand : sand;
+      const bottomSand = isFlipped ? sand : 100 - sand;
+      
+      // Update top sand (empties from top)
+      const topHeight = topSand * 1.8;
+      const topY = 190 - topHeight;
+      topSandEl.setAttribute('y', topY);
+      topSandEl.setAttribute('height', topHeight);
+      
+      // Update bottom sand (fills from bottom)
+      const bottomHeight = bottomSand * 1.8;
+      const bottomY = 390 - bottomHeight;
+      bottomSandEl.setAttribute('y', bottomY);
+      bottomSandEl.setAttribute('height', bottomHeight);
+      
+      // Update sand stream visibility
+      if (isRunning && sand > 0 && sand < 100) {
+        sandStreamEl.style.display = 'block';
+      } else {
+        sandStreamEl.style.display = 'none';
+      }
+      
+      // Update message
+      if (!isRunning && ((isFlipped && sand === 100) || (!isFlipped && sand === 0))) {
+        messageEl.textContent = "Time's up!";
+      } else {
+        messageEl.textContent = '';
+      }
+    }
+    
+    function animate() {
+      if (!isRunning) return;
+      
+      const now = Date.now();
+      const elapsed = now - lastUpdate;
+      lastUpdate = now;
+      
+      const changeRate = (100 / TOTAL_DURATION) * elapsed;
+      
+      if (isFlipped) {
+        sand += changeRate;
+        if (sand >= 100) {
+          sand = 100;
+          isRunning = false;
+          playBeep();
+          startBtn.textContent = 'Start';
+          document.body.classList.add('flashing');
+          setTimeout(() => {
+            document.body.classList.remove('flashing');
+          }, 2000);
+        }
+      } else {
+        sand -= changeRate;
+        if (sand <= 0) {
+          sand = 0;
+          isRunning = false;
+          playBeep();
+          startBtn.textContent = 'Start';
+          document.body.classList.add('flashing');
+          setTimeout(() => {
+            document.body.classList.remove('flashing');
+          }, 2000);
+        }
+      }
+      
+      updateVisuals();
+      
+      if (isRunning) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    }
+    
+    startBtn.addEventListener('click', () => {
+      if (isRunning) {
+        isRunning = false;
+        startBtn.textContent = 'Start';
+        if (animationFrame) {
+          cancelAnimationFrame(animationFrame);
+        }
+      } else {
+        isRunning = true;
+        startBtn.textContent = 'Pause';
+        lastUpdate = Date.now();
+        animate();
+      }
+    });
+    
+    flipBtn.addEventListener('click', () => {
+      isFlipped = !isFlipped;
+      isRunning = true;
+      startBtn.textContent = 'Pause';
+      lastUpdate = Date.now();
+      updateVisuals();
+      animate();
+    });
+    
+    resetBtn.addEventListener('click', () => {
+      sand = 100;
+      isFlipped = false;
+      isRunning = false;
+      startBtn.textContent = 'Start';
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+      updateVisuals();
+    });
+    
+    // Initial render
+    updateVisuals();
+  </script>
+</body>
+</html>
