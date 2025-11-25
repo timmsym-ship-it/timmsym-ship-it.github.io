@@ -80,23 +80,23 @@
 </head>
 <body>
   <div id="timer-container">
-    <svg width="200" height="400" viewBox="0 0 200 400" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
+    <svg width="200" height="480" viewBox="0 0 200 480" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
       <!-- Top sand -->
-      <rect id="top-sand" x="10" y="10" width="180" height="180" fill="#d4a574" />
+      <rect id="top-sand" x="10" y="10" width="180" height="216" fill="#d4a574" />
       
       <!-- Bottom sand -->
-      <rect id="bottom-sand" x="10" y="390" width="180" height="0" fill="#d4a574" />
+      <rect id="bottom-sand" x="10" y="470" width="180" height="0" fill="#d4a574" />
       
       <!-- Sand stream -->
-      <line id="sand-stream" x1="100" y1="200" x2="100" y2="210" stroke="#d4a574" stroke-width="2" style="display: none;" />
+      <line id="sand-stream" x1="100" y1="226" x2="100" y2="254" stroke="#d4a574" stroke-width="2" style="display: none;" />
       
       <!-- Frame -->
-      <rect x="10" y="10" width="180" height="180" fill="none" stroke="#333" stroke-width="3" />
-      <rect x="10" y="210" width="180" height="180" fill="none" stroke="#333" stroke-width="3" />
+      <rect x="10" y="10" width="180" height="216" fill="none" stroke="#333" stroke-width="3" />
+      <rect x="10" y="254" width="180" height="216" fill="none" stroke="#333" stroke-width="3" />
       
       <!-- Connecting neck -->
-      <path d="M 100 190 L 90 200 L 110 200 Z" fill="#333" />
-      <path d="M 100 210 L 90 200 L 110 200 Z" fill="#333" />
+      <path d="M 100 226 L 90 240 L 110 240 Z" fill="#333" />
+      <path d="M 100 254 L 90 240 L 110 240 Z" fill="#333" />
     </svg>
   </div>
 
@@ -150,14 +150,14 @@
       const bottomSand = isFlipped ? sand : 100 - sand;
       
       // Update top sand (empties from top)
-      const topHeight = topSand * 1.8;
-      const topY = 190 - topHeight;
+      const topHeight = topSand * 2.16;
+      const topY = 226 - topHeight;
       topSandEl.setAttribute('y', topY);
       topSandEl.setAttribute('height', topHeight);
       
       // Update bottom sand (fills from bottom)
-      const bottomHeight = bottomSand * 1.8;
-      const bottomY = 390 - bottomHeight;
+      const bottomHeight = bottomSand * 2.16;
+      const bottomY = 470 - bottomHeight;
       bottomSandEl.setAttribute('y', bottomY);
       bottomSandEl.setAttribute('height', bottomHeight);
       
@@ -190,9 +190,15 @@
         if (sand >= 100) {
           sand = 100;
           isRunning = false;
-          playBeep();
           startBtn.textContent = 'Start';
           document.body.classList.add('flashing');
+          
+          // Play beep 4 times
+          playBeep();
+          setTimeout(() => playBeep(), 500);
+          setTimeout(() => playBeep(), 1000);
+          setTimeout(() => playBeep(), 1500);
+          
           setTimeout(() => {
             document.body.classList.remove('flashing');
           }, 2000);
@@ -202,9 +208,15 @@
         if (sand <= 0) {
           sand = 0;
           isRunning = false;
-          playBeep();
           startBtn.textContent = 'Start';
           document.body.classList.add('flashing');
+          
+          // Play beep 4 times
+          playBeep();
+          setTimeout(() => playBeep(), 500);
+          setTimeout(() => playBeep(), 1000);
+          setTimeout(() => playBeep(), 1500);
+          
           setTimeout(() => {
             document.body.classList.remove('flashing');
           }, 2000);
